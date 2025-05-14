@@ -10,6 +10,7 @@ stunnerGatewayOperator:
   deployment:
     name: stunner-gateway-operator
     podLabels: {}
+    podAnnotations: {}
     tolerations: []
     nodeSelector:
       kubernetes.io/os: linux
@@ -22,7 +23,7 @@ stunnerGatewayOperator:
         image:
           name: docker.io/l7mp/stunner-gateway-operator
           pullPolicy: IfNotPresent
-          tag: 1.0.0
+          tag: 1.1.0
         resources:
           limits:
             cpu: 1000m
@@ -47,7 +48,7 @@ stunnerGatewayOperator:
       image:
         name: docker.io/l7mp/stunnerd
         pullPolicy: IfNotPresent
-        tag: 1.0.0
+        tag: 1.1.0
       imagePullSecrets:
         # - name: docker-registry-secret
       command:
@@ -77,6 +78,7 @@ stunnerAuthService:
   enabled: true
   deployment:
     podLabels: {}
+    podAnnotations: {}
     tolerations: []
     replicas: 1
     nodeSelector:
@@ -90,7 +92,7 @@ stunnerAuthService:
         image:
           name: docker.io/l7mp/stunner-auth-server
           pullPolicy: IfNotPresent
-          tag: 1.0.0
+          tag: 1.1.0
         resources:
           limits:
             cpu: 200m

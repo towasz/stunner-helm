@@ -14,7 +14,6 @@ on:
           - stunner-gateway-operator
           - stunner-premium #stunner-gateway-operator premium edition, left out the gateway-operator part to shorten the name
 
-
 env:
   TAG: ${{ inputs.tag }}
   TYPE: ${{ inputs.type }}
@@ -82,36 +81,34 @@ jobs:
           sed -i '/dataplane:/,/tag:/ s/\(tag:\s*\).*/\1'"${{ env.TAG }}"'/' stunner-gateway-operator/values.yaml
           sed -i '/authService:/,/tag:/ s/\(tag:\s*\).*/\1'"${{ env.TAG }}"'/' stunner-gateway-operator/values.yaml
           sed -ri 's/^(\s*)(appVersion\s*:\s*.*\s*$)/\1appVersion: ${{ env.TAG }}/' stunner-gateway-operator/Chart.yaml
-          sed -i '/container:/,/name:/ s/\(name:\s*\)docker\.io\/l7mp\/stunner-gateway-operator/\1'"${{ env.TYPE }}"'/' stunner-gateway-operator/values.yaml
+          sed -i '/container:/,/name:/ s/\(name:\s*\)docker\.io\/l7mp\/stunner-gateway-operator/\1docker.io\/l7mp\/stunner-gateway-operator-premium/' stunner-gateway-operator/values.yaml
           sed -i '/dataplane:/,/name:/ s/\(name:\s*\)docker\.io\/l7mp\/stunnerd/\1docker.io\/l7mp\/stunnerd-premium/' stunner-gateway-operator/values.yaml
           sed -ri 's/^(\s*)(name\s*:\s*.*\s*$)/\1name: stunner-premium/' stunner-gateway-operator/Chart.yaml
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
         with:
-          version: v3.16.2
+          version: v3.16.4
 
       - name: Set up chart-testing
         uses: helm/chart-testing-action@v2
 
       - name: Run chart-testing (lint)
-        #TODO: temporary 'if', should be removed. To remove we may need to provide a dummy customer key, not sure
-        if: ${{ env.TYPE != 'stunner-premium' }}
         run: |
           cd stunner-helm
           ct lint --all --chart-dirs helm --excluded-charts stunner-kurento-one2one-call
 
       - name: Create kind cluster
-        #TODO: temporary 'if', should be removed. To remove we may need to provide a dummy customer key, not sure
-        if: ${{ env.TYPE != 'stunner-premium' }}
         uses: helm/kind-action@v1
 
       - name: Run chart-testing (install)
-        #TODO: temporary 'if', should be removed. To remove we may need to provide a dummy customer key, not sure
-        if: ${{ env.TYPE != 'stunner-premium' }}
         run: |
           cd stunner-helm
-          ct install --chart-dirs helm --charts helm/${{ env.TYPE }}
+          if ${{ env.TYPE == 'stunner-premium' }}; then
+            ct install --chart-dirs helm --charts helm/stunner-gateway-operator
+          else
+            ct install --chart-dirs helm --charts helm/${{ env.TYPE }}
+          fi
 
       - name: Build helm chart for ${{ env.TYPE }}
         run: |
@@ -127,29 +124,29 @@ jobs:
           git config --global user.email "l7mp.info@gmail.com"
           git config --global user.name "BotL7mp"
 
-      - name: l7mp.io checkout
+      - name: Checkout build branch
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.WEB_PAT_TOKEN }}
-          path: l7mp.io
-          ref: master
-          repository: l7mp/l7mp.io
+          path: build
+          repository: l7mp/stunner-helm
+          ref: build
 
-      - name: Update and deploy l7mp/l7mp.io repository
+      - name: Update build branch
         run: |
           if ${{ env.TAG == 'dev' }}; then
-            rm -rf l7mp.io/public/stunner/${{ env.TYPE }}-dev*.tgz
+            rm -rf build/${{ env.TYPE }}-dev*.tgz
           fi
-          cp stunner-helm/helm/*.tgz l7mp.io/public/stunner
-          helm repo index l7mp.io/public/stunner/ --url https://l7mp.io/stunner
-          cd l7mp.io
+          cp stunner-helm/helm/*.tgz build/
+          helm repo index build --url https://l7mp.io/stunner
+          cd build
           git add .
           if ${{ env.TAG == 'dev' }}; then
             git commit -m "Update dev helm chart from l7mp/${{ env.TYPE }}" -m "(triggered by the 'Helm release' github action.)"
           else
             git commit -m "Release helm chart from l7mp/${{ env.TYPE }}" -m "(triggered by the 'Helm release' github action.)"
           fi
-          git push origin master
+          git push origin build
 
       - name: Update stunner-helm repo
         if: ${{ env.TAG != 'dev' && env.TYPE != 'stunner-premium' }}
