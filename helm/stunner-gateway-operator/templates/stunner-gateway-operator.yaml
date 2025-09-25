@@ -295,7 +295,7 @@ metadata:
   name: stunner-gateway-operator-controller-manager
   namespace: {{ $.Values.namespace | default $.Release.Namespace }}
 spec:
-  replicas: 1
+  replicas: {{ $.Values.stunnerGatewayOperator.deployment.replicas }}
   selector:
     matchLabels:
       control-plane: stunner-gateway-operator-controller-manager
@@ -371,6 +371,9 @@ spec:
       {{- with .Values.stunnerGatewayOperator.deployment.nodeSelector }}
       nodeSelector: {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.stunnerGatewayOperator.deployment.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.stunnerGatewayOperator.deployment.tolerations }}
       tolerations: {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -378,3 +381,10 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if $.Values.stunnerGatewayOperator.deployment.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- with $.Values.stunnerGatewayOperator.deployment.topologySpreadConstraints }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+
